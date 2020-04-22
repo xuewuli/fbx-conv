@@ -116,7 +116,7 @@ namespace readers {
             segmentPolyCount(segmentPolyCount),
 			points(mesh->GetControlPoints()),
 			elementMaterialCount(mesh->GetElementMaterialCount()),
-			uvCount((unsigned int)(mesh->GetElementUVCount() > 8 ? 8 : mesh->GetElementUVCount())),
+			uvCount((unsigned int)(mesh->GetElementUVCount() > 1 ? 1 : mesh->GetElementUVCount())),
 			pointBlendWeights(0),
 			skin((maxNodePartBoneCount > 0 && maxVertexBlendWeightCount > 0 && (unsigned int)mesh->GetDeformerCount(FbxDeformer::eSkin) > 0) ? static_cast<FbxSkin*>(mesh->GetDeformer(0, FbxDeformer::eSkin)) : 0),
 			bonesOverflow(false),

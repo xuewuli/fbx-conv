@@ -144,6 +144,7 @@ void Attributes::serialize(json::BaseJSONWriter &writer) const {
 		writer << "size" << v.size;
 		writer << "type" << v.type;
 		writer << "attribute" << v.name;
+		writer << "normalize" << v.normalize;
 		writer << json::end;
         if(key == "VERTEX_ATTRIB_BLEND_INDEX")
         {

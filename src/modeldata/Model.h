@@ -32,7 +32,7 @@
 namespace fbxconv {
 namespace modeldata {
 	const short VERSION_HI = 0;
-	const short VERSION_LO = 7;
+	const short VERSION_LO = 8;
 
 	/** A model is responsable for freeing all animations, materials, meshes and nodes it contains */
 	struct Model : public json::ConstSerializable {
@@ -141,7 +141,7 @@ namespace modeldata {
 		}
 
 		virtual void serialize(json::BaseJSONWriter &writer) const;
-        void writeBinary(FILE* file);
+        	void writeBinary(FILE* file, const fbxconv::Settings* settings);
 	};
 }
 }

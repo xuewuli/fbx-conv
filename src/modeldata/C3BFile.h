@@ -4,6 +4,7 @@
 #include "FileIO.h"
 #include "Model.h"
 #include "ReferenceTable.h"
+#include "../Settings.h"
 
 namespace fbxconv {
 
@@ -16,7 +17,7 @@ public:
 	~C3BFile(void);
 
 	// Destruct.
-	bool saveBinary(const std::string& filepath);
+	bool saveBinary(const std::string& filepath, const Settings* settings);
 
 	void addToRefTable(ObjRef* obj);
 

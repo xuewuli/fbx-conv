@@ -22,6 +22,8 @@
 
 #include "../json/BaseJSONWriter.h"
 #include <map>
+#include "../Settings.h"
+
 #define ATTRIBUTE_UNKNOWN		0
 #define ATTRIBUTE_POSITION		1
 #define ATTRIBUTE_NORMAL		2
@@ -56,6 +58,15 @@
 #define ATTRIBUTE_TYPE_UINT_HEX	(ATTRIBUTE_TYPE_UINT | ATTRIBUTE_TYPE_HEX)
 
 #define INIT_VECTOR(T, A) std::vector<T>(A, A + sizeof(A) / sizeof(*A))
+
+#define DATA_TYPE_GL_BYTE                                          0x0
+#define DATA_TYPE_GL_UNSIGNED_BYTE                                 0x1
+#define DATA_TYPE_GL_SHORT                                         0x2
+#define DATA_TYPE_GL_UNSIGNED_SHORT                                0x3
+#define DATA_TYPE_GL_INT                                           0x4
+#define DATA_TYPE_GL_UNSIGNED_INT                                  0x5
+#define DATA_TYPE_GL_FLOAT                                         0x6
+#define DATA_TYPE_GL_FIXED                                         0x7
 
 namespace fbxconv {
 namespace modeldata {
@@ -101,12 +112,12 @@ namespace modeldata {
 		//attribute size
 		unsigned int size;
 		//GL_FLOAT
-		std::string type;
+		unsigned int type;
 		//VERTEX_ATTRIB_POSITION,VERTEX_ATTRIB_COLOR,VERTEX_ATTRIB_TEX_COORD,VERTEX_ATTRIB_NORMAL, VERTEX_ATTRIB_BLEND_WEIGHT, VERTEX_ATTRIB_BLEND_INDEX, GLProgram for detail
-		std::string name;
+		unsigned int name;
 		//size in bytes
 		//unsigned int attribSizeBytes;
-
+		bool normalize;
 		//unsigned int usage;
 	};
 	#define ATTRIBUTE_SIZE(idx) (AttributeTypes[idx].size())
@@ -114,86 +125,193 @@ namespace modeldata {
 	struct Attributes : public json::ConstSerializable {
 		unsigned long value;
         std::map<std::string, MeshVertexAttrib> attributemap;
+        std::map<std::string, MeshVertexAttrib> packedAttributemap;
         Attributes() : value(0) 
         {
             MeshVertexAttrib v1;
-            v1.name = "VERTEX_ATTRIB_POSITION";
+            v1.name = ATTRIBUTE_POSITION;
             v1.size = 3;
-            v1.type = "GL_FLOAT";
+            v1.type = DATA_TYPE_GL_FLOAT;
+			v1.normalize = false;
             attributemap["VERTEX_ATTRIB_POSITION"]= v1;
 
-            v1.name = "VERTEX_ATTRIB_NORMAL";
+            v1.name = ATTRIBUTE_NORMAL;
             v1.size = 3;
-            v1.type = "GL_FLOAT";
+            v1.type = DATA_TYPE_GL_FLOAT;
+			v1.normalize = false;
             attributemap["VERTEX_ATTRIB_NORMAL"]= v1;
 
-            v1.name = "VERTEX_ATTRIB_TEX_COORD";
+            v1.name = ATTRIBUTE_TEXCOORD0;
             v1.size = 2;
-            v1.type = "GL_FLOAT";
+            v1.type = DATA_TYPE_GL_FLOAT;
+			v1.normalize = false;
             attributemap["VERTEX_ATTRIB_TEX_COORD"]= v1;
 
-            v1.name = "VERTEX_ATTRIB_TEX_COORD1";
+            v1.name = ATTRIBUTE_TEXCOORD1;
             v1.size = 2;
-            v1.type = "GL_FLOAT";
+            v1.type = DATA_TYPE_GL_FLOAT;
+			v1.normalize = false;
             attributemap["VERTEX_ATTRIB_TEX_COORD1"]= v1;
 
-            v1.name = "VERTEX_ATTRIB_TEX_COORD2";
+            v1.name = ATTRIBUTE_TEXCOORD2;
             v1.size = 2;
-            v1.type = "GL_FLOAT";
+            v1.type = DATA_TYPE_GL_FLOAT;
+			v1.normalize = false;
             attributemap["VERTEX_ATTRIB_TEX_COORD2"]= v1;
 
-            v1.name = "VERTEX_ATTRIB_TEX_COORD3";
+            v1.name = ATTRIBUTE_TEXCOORD3;
             v1.size = 2;
-            v1.type = "GL_FLOAT";
+            v1.type = DATA_TYPE_GL_FLOAT;
+			v1.normalize = false;
             attributemap["VERTEX_ATTRIB_TEX_COORD3"]= v1;
 
-            v1.name = "VERTEX_ATTRIB_TEX_COORD4";
+            v1.name = ATTRIBUTE_TEXCOORD4;
             v1.size = 2;
-            v1.type = "GL_FLOAT";
+            v1.type = DATA_TYPE_GL_FLOAT;
+			v1.normalize = false;
             attributemap["VERTEX_ATTRIB_TEX_COORD4"]= v1;
 
-            v1.name = "VERTEX_ATTRIB_TEX_COORD5";
+            v1.name = ATTRIBUTE_TEXCOORD5;
             v1.size = 2;
-            v1.type = "GL_FLOAT";
+            v1.type = DATA_TYPE_GL_FLOAT;
+			v1.normalize = false;
             attributemap["VERTEX_ATTRIB_TEX_COORD5"]= v1;
 
-            v1.name = "VERTEX_ATTRIB_TEX_COORD6";
+            v1.name = ATTRIBUTE_TEXCOORD6;
             v1.size = 2;
-            v1.type = "GL_FLOAT";
+            v1.type = DATA_TYPE_GL_FLOAT;
+			v1.normalize = false;
             attributemap["VERTEX_ATTRIB_TEX_COORD6"]= v1;
 
-            v1.name = "VERTEX_ATTRIB_TEX_COORD7";
+            v1.name = ATTRIBUTE_TEXCOORD7;
             v1.size = 2;
-            v1.type = "GL_FLOAT";
+            v1.type = DATA_TYPE_GL_FLOAT;
+			v1.normalize = false;
             attributemap["VERTEX_ATTRIB_TEX_COORD7"]= v1;
 
 
-            v1.name = "VERTEX_ATTRIB_BLEND_WEIGHT";
+            v1.name = ATTRIBUTE_BLENDWEIGHT0;
             v1.size = 4;
-            v1.type = "GL_FLOAT";
+            v1.type = DATA_TYPE_GL_FLOAT;
+			v1.normalize = false;
             attributemap["VERTEX_ATTRIB_BLEND_WEIGHT"]= v1;
 
-            v1.name = "VERTEX_ATTRIB_BLEND_INDEX";
+            v1.name = ATTRIBUTE_BLENDWEIGHT1; // a hack
             v1.size = 4;
-            v1.type = "GL_FLOAT";
+            v1.type = DATA_TYPE_GL_FLOAT;
+			v1.normalize = false;
             attributemap["VERTEX_ATTRIB_BLEND_INDEX"]= v1;
 
-            v1.name = "VERTEX_ATTRIB_COLOR";
+            v1.name = ATTRIBUTE_COLOR;
             v1.size = 4;
-            v1.type = "GL_FLOAT";
+            v1.type = DATA_TYPE_GL_FLOAT;
+			v1.normalize = false;
             attributemap["VERTEX_ATTRIB_COLOR"]= v1;
 
 
-            v1.name = "VERTEX_ATTRIB_TANGENT";
+            v1.name = ATTRIBUTE_TANGENT;
             v1.size = 3;
-            v1.type = "GL_FLOAT";
+            v1.type = DATA_TYPE_GL_FLOAT;
+			v1.normalize = false;
             attributemap["VERTEX_ATTRIB_TANGENT"]= v1;
 
-            v1.name = "VERTEX_ATTRIB_BINORMAL";
+            v1.name = ATTRIBUTE_BINORMAL;
             v1.size = 3;
-            v1.type = "GL_FLOAT";
+            v1.type = DATA_TYPE_GL_FLOAT;
+			v1.normalize = false;
             attributemap["VERTEX_ATTRIB_BINORMAL"]= v1;
 
+            v1.name = ATTRIBUTE_POSITION;
+            v1.size = 3 ;
+            v1.type = DATA_TYPE_GL_FLOAT;
+			v1.normalize = false;
+            packedAttributemap["VERTEX_ATTRIB_POSITION"]= v1;
+
+            v1.name = ATTRIBUTE_NORMAL;
+            v1.size = 4;
+            v1.type = DATA_TYPE_GL_BYTE;
+			v1.normalize = true;
+            packedAttributemap["VERTEX_ATTRIB_NORMAL"]= v1;
+
+            v1.name = ATTRIBUTE_TEXCOORD0;
+            v1.size = 4;
+            v1.type = DATA_TYPE_GL_UNSIGNED_BYTE;
+			v1.normalize = true;
+            packedAttributemap["VERTEX_ATTRIB_TEX_COORD"]= v1;
+
+            v1.name = ATTRIBUTE_TEXCOORD1;
+            v1.size = 4;
+            v1.type = DATA_TYPE_GL_UNSIGNED_BYTE;
+			v1.normalize = true;
+            packedAttributemap["VERTEX_ATTRIB_TEX_COORD1"]= v1;
+
+            v1.name = ATTRIBUTE_TEXCOORD2;
+            v1.size = 4;
+            v1.type = DATA_TYPE_GL_UNSIGNED_BYTE;
+			v1.normalize = true;
+            packedAttributemap["VERTEX_ATTRIB_TEX_COORD2"]= v1;
+
+            v1.name = ATTRIBUTE_TEXCOORD3;
+            v1.size = 4;
+            v1.type = DATA_TYPE_GL_UNSIGNED_BYTE;
+			v1.normalize = true;
+            packedAttributemap["VERTEX_ATTRIB_TEX_COORD3"]= v1;
+
+            v1.name = ATTRIBUTE_TEXCOORD4;
+            v1.size = 4;
+            v1.type = DATA_TYPE_GL_UNSIGNED_BYTE;
+			v1.normalize = true;
+            packedAttributemap["VERTEX_ATTRIB_TEX_COORD4"]= v1;
+
+            v1.name = ATTRIBUTE_TEXCOORD5;
+            v1.size = 4;
+            v1.type = DATA_TYPE_GL_UNSIGNED_BYTE;
+			v1.normalize = true;
+            packedAttributemap["VERTEX_ATTRIB_TEX_COORD5"]= v1;
+
+            v1.name = ATTRIBUTE_TEXCOORD6;
+            v1.size = 4;
+            v1.type = DATA_TYPE_GL_UNSIGNED_BYTE;
+			v1.normalize = true;
+            packedAttributemap["VERTEX_ATTRIB_TEX_COORD6"]= v1;
+
+            v1.name = ATTRIBUTE_TEXCOORD7;
+            v1.size = 4;
+            v1.type = DATA_TYPE_GL_UNSIGNED_BYTE;
+			v1.normalize = true;
+            packedAttributemap["VERTEX_ATTRIB_TEX_COORD7"]= v1;
+
+
+            v1.name = ATTRIBUTE_BLENDWEIGHT0;
+            v1.size = 4;
+            v1.type = DATA_TYPE_GL_UNSIGNED_BYTE;
+			v1.normalize = true;
+            packedAttributemap["VERTEX_ATTRIB_BLEND_WEIGHT"]= v1;
+
+            v1.name = ATTRIBUTE_BLENDWEIGHT1; // a hack
+            v1.size = 4;
+            v1.type = DATA_TYPE_GL_UNSIGNED_BYTE;
+			v1.normalize = false;
+            packedAttributemap["VERTEX_ATTRIB_BLEND_INDEX"]= v1;
+
+            v1.name = ATTRIBUTE_COLOR;
+            v1.size = 4;
+            v1.type = DATA_TYPE_GL_UNSIGNED_BYTE;
+			v1.normalize = true;
+            packedAttributemap["VERTEX_ATTRIB_COLOR"]= v1;
+
+
+            v1.name = ATTRIBUTE_TANGENT;
+            v1.size = 4;
+            v1.type = DATA_TYPE_GL_BYTE;
+			v1.normalize = true;
+            packedAttributemap["VERTEX_ATTRIB_TANGENT"]= v1;
+
+            v1.name = ATTRIBUTE_BINORMAL;
+            v1.size = 4;
+            v1.type = DATA_TYPE_GL_BYTE;
+			v1.normalize = true;
+            packedAttributemap["VERTEX_ATTRIB_BINORMAL"]= v1;
         }
 
 		Attributes(const unsigned long &v) : value(v) {}
@@ -280,6 +398,9 @@ namespace modeldata {
 		}
 
 		void hasNormal(const bool &v) {
+			if (v) {
+				return; 
+			}
 			set(ATTRIBUTE_NORMAL, v);
 		}
 
@@ -288,6 +409,9 @@ namespace modeldata {
 		}
 
 		void hasColor(const bool &v) {
+			if (v) {
+				return; 
+			}
 			set(ATTRIBUTE_COLOR, v);
 		}
 
@@ -296,6 +420,9 @@ namespace modeldata {
 		}
 
 		void hasColorPacked(const bool &v) {
+			if (v) {
+				return; 
+			}
 			set(ATTRIBUTE_COLORPACKED, v);
 		}
 
@@ -304,6 +431,9 @@ namespace modeldata {
 		}
 
 		void hasTangent(const bool &v) {
+			if (v) {
+				return; 
+			}
 			set(ATTRIBUTE_TANGENT, v);
 		}
 
@@ -312,6 +442,9 @@ namespace modeldata {
 		}
 
 		void hasBinormal(const bool &v) {
+			if (v) {
+				return; 
+			}
 			set(ATTRIBUTE_BINORMAL, v);
 		}
 
@@ -332,7 +465,7 @@ namespace modeldata {
 		}
 
 		virtual void serialize(json::BaseJSONWriter &writer) const;
-        void writeBinary(FILE* file);
+        	void writeBinary(FILE* file, const struct fbxconv::Settings* settings);
 	};
 } }
 

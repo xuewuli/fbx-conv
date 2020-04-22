@@ -21,10 +21,12 @@
 #define MODELDATA_MESH_H
 
 #include <vector>
+#include "../Settings.h"
 #include "MeshPart.h"
 #include "Attributes.h"
 #include "../json/BaseJSONWriter.h"
 #include "Reference.h"
+#include "../meshoptimizer/meshoptimizer.h"
 
 namespace fbxconv {
 namespace modeldata {
@@ -105,7 +107,7 @@ namespace modeldata {
 
 		inline bool compare(const float* lhs, const float* rhs, const unsigned int &n) {
 			for (unsigned int i = 0; i < n; i++)
-				if ((*(unsigned int*)&lhs[i] != *(unsigned int*)&rhs[i]) && lhs[i] != rhs[i])
+				if (abs(lhs[i] - rhs[i]) > 0.0001f) // TODO 变成参数
 					return false;
 			return true;
 		}
@@ -174,6 +176,39 @@ namespace modeldata {
             }
         }
 
+        inline void Optimizer() {
+            int stride = attributes.size();
+            unsigned int num = vertices.size();
+            unsigned int vertex_count = num / stride;
+            unsigned int vertex_size = stride * sizeof(float);
+
+            for (unsigned int i = 0; i < parts.size(); ++i){
+                auto meshPart = parts[i];
+                const unsigned int index_count = meshPart->indices.size();
+                meshopt_optimizeVertexCache(&meshPart->indices[0], &meshPart->indices[0], index_count, vertex_count);
+                meshopt_optimizeOverdraw(&meshPart->indices[0], &meshPart->indices[0], index_count, &vertices[0], vertex_count, vertex_size, 1.01f);
+            }
+
+            unsigned int total_index = indexCount();
+            std::vector<unsigned short> allIndices(total_index);
+            unsigned int wpos = 0;
+            for (unsigned int i = 0; i < parts.size(); ++i) {
+                auto meshPart = parts[i];
+                const unsigned int index_count = meshPart->indices.size();
+                memcpy(&allIndices[wpos], &meshPart->indices[0], index_count * sizeof(unsigned short));
+                wpos += index_count;
+            }
+
+            meshopt_optimizeVertexFetch(&vertices[0], &allIndices[0], total_index, &vertices[0], vertex_count, vertex_size);
+            unsigned int pos = 0;
+            for (unsigned int i = 0; i < parts.size(); ++i){
+                auto meshPart = parts[i];
+                const unsigned int index_count = meshPart->indices.size();
+                memcpy(&meshPart->indices[0], &allIndices[pos], index_count * sizeof(unsigned short));
+                pos += index_count;
+            }
+        }
+
         inline void calcAABB(){
             int stride = attributes.size();
             unsigned int num = vertices.size();
@@ -202,8 +237,120 @@ namespace modeldata {
             object.id = id+"mesh";
 			return &object;
 		}
+
+        int getPackVertexSize() {
+            int size = 0;
+            if (attributes.hasPosition()) {
+                size += 3 * sizeof(float);
+            }
+			if (attributes.hasNormal()) {
+                size += 4;
+            }
+			if (attributes.hasColor()) {
+                size += 4;
+            }
+			if (attributes.hasColorPacked()) {
+                size += 4;
+            }
+			if (attributes.hasTangent()) {
+                size += 4;
+            }
+			if (attributes.hasBinormal()) {
+                size += 4;
+            }
+			for (unsigned int i = 0; i < 8; i++) {
+                if (attributes.hasUV(i)) {
+                    size += 4;
+                }
+            }
+			for (unsigned int i = 0; i < 8; i++) {
+                if (attributes.hasBlendWeight(i)) {
+                    size += 2;
+                }
+            }
+            return size;   
+        }
+        float clampUV(float v) const {
+            if (v < 0.0f) {
+                return 0.0f;
+            } else if (v > 1.0f) {
+                return 1.0f;
+            }
+            return v;
+        }
+        float warpUV(float v) const {
+            float r = v - (int)v;
+            if (r < 0.0f) {
+                r = 1.0f + r;
+            }
+            return r;
+        }
+        const char* packVertex(const float *vertex, char* packed) {
+            int writePos = 0;
+            if (attributes.hasPosition()) {
+                memcpy((void *)&packed[writePos], vertex, 3 * sizeof(float));
+                vertex += ATTRIBUTE_SIZE(ATTRIBUTE_POSITION);
+                writePos += 3 * sizeof(float);
+            }
+			if (attributes.hasNormal()) {
+                packed[writePos++] = (char)(255 * ((vertex[0] + 1.0f) * 0.5f));
+                packed[writePos++] = (char)(255 * ((vertex[1] + 1.0f) * 0.5f));
+                packed[writePos++] = (char)(255 * ((vertex[2] + 1.0f) * 0.5f));
+                packed[writePos++] = (char)(255);
+                vertex += ATTRIBUTE_SIZE(ATTRIBUTE_NORMAL);
+            }
+			if (attributes.hasColor()) {
+                packed[writePos++] = (char)(255 * vertex[0]);
+                packed[writePos++] = (char)(255 * vertex[1]);
+                packed[writePos++] = (char)(255 * vertex[2]);
+                packed[writePos++] = (char)(255 * vertex[3]);
+                vertex += ATTRIBUTE_SIZE(ATTRIBUTE_COLOR);
+            }
+			if (attributes.hasColorPacked()) {
+                memcpy((void *)&packed[writePos], vertex, sizeof(float));
+                vertex += ATTRIBUTE_SIZE(ATTRIBUTE_COLORPACKED);
+                writePos += sizeof(float);
+            }
+			if (attributes.hasTangent()) {
+                packed[writePos++] = (char)(255 * ((vertex[0] + 1.0f) * 0.5f));
+                packed[writePos++] = (char)(255 * ((vertex[1] + 1.0f) * 0.5f));
+                packed[writePos++] = (char)(255 * ((vertex[2] + 1.0f) * 0.5f));
+                packed[writePos++] = (char)(255);
+                vertex += ATTRIBUTE_SIZE(ATTRIBUTE_TANGENT);
+            }
+			if (attributes.hasBinormal()) {
+                packed[writePos++] = (char)(255 * ((vertex[0] + 1.0f) * 0.5f));
+                packed[writePos++] = (char)(255 * ((vertex[1] + 1.0f) * 0.5f));
+                packed[writePos++] = (char)(255 * ((vertex[2] + 1.0f) * 0.5f));
+                packed[writePos++] = (char)(255);
+                vertex += ATTRIBUTE_SIZE(ATTRIBUTE_BINORMAL);
+            }
+			for (unsigned int i = 0; i < 8; i++) {
+                if (attributes.hasUV(i)) {
+                    packed[writePos++] = (char)(255 * clampUV(vertex[0]));
+                    packed[writePos++] = (char)(255 * clampUV(vertex[1]));
+                    packed[writePos++] = (char)(0);
+                    packed[writePos++] = (char)(255);
+                    vertex += ATTRIBUTE_SIZE(ATTRIBUTE_TEXCOORD0 + i);
+                }
+            }
+			for (unsigned int i = 0; i < 8; i++) {
+                if (attributes.hasBlendWeight(i)) {
+                    packed[writePos++] = (char)(255 * vertex[0]);
+                    vertex += 1;
+                }
+            }
+			for (unsigned int i = 0; i < 8; i++) {
+                if (attributes.hasBlendWeight(i)) {
+                    packed[writePos++] = (char)(vertex[0]);
+                    vertex += 1;
+                }
+            }
+            return packed;
+        }
+
 		virtual void serialize(json::BaseJSONWriter &writer) const;
-        void writeBinary(FILE* file);
+        void writeBinary(FILE* file, const struct fbxconv::Settings* settings);
 	};
 }
 }

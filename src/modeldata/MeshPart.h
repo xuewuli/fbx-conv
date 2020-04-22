@@ -40,8 +40,8 @@ namespace modeldata {
 		float aabb[6];
 
 		MeshPart() : primitiveType(0) {
-			aabb[0] = aabb[1] = aabb[2] = 99999.0f;
-			aabb[3] = aabb[4] = aabb[5] = -99999.0f;
+			aabb[0] = aabb[1] = aabb[2] = std::numeric_limits<float>::max();
+			aabb[3] = aabb[4] = aabb[5] = -std::numeric_limits<float>::max();
 		}
 
 		MeshPart(const MeshPart &copyFrom) {
@@ -57,8 +57,8 @@ namespace modeldata {
 			indices.clear();
 			id.clear();
 			primitiveType = 0;
-			aabb[0] = aabb[1] = aabb[2] = 99999.0f;
-			aabb[3] = aabb[4] = aabb[5] = -99999.0f;
+			aabb[0] = aabb[1] = aabb[2] = std::numeric_limits<float>::max();
+			aabb[3] = aabb[4] = aabb[5] = -std::numeric_limits<float>::max();
 		}
 
 		void set(const char *id, const unsigned int &primitiveType, const std::vector<unsigned short> &indices) {

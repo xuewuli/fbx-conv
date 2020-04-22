@@ -60,6 +60,16 @@ void write(const float* values, int length, FILE* file)
         write(values[i], file);
     }*/
 }
+
+void write(const char* values, int length, FILE* file)
+{
+    fwrite(values, sizeof(char), length, file);
+    /*for (int i = 0; i < length; ++i)
+    {
+        write(values[i], file);
+    }*/
+}
+
 void write(const std::string& str, FILE* file)
 {
     // Write the length of the string

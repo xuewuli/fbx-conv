@@ -428,6 +428,8 @@ namespace readers {
                 mesh->calcNormal();
             }
 
+			mesh->Optimizer();
+
             mesh->calcAABB();
 
 			delete[] vertex;
@@ -561,7 +563,7 @@ namespace readers {
                             
                             if(hashes.size() >= settings->maxIndexCount)
                             {
-                                FbxMeshInfo * const info = new FbxMeshInfo(log, mesh, settings->packColors, settings->maxVertexBonesCount, settings->forceMaxVertexBoneCount, settings->maxNodePartBonesCount, polyBegin, polyCount);
+                                FbxMeshInfo * const info = new FbxMeshInfo(log, mesh, false, settings->maxVertexBonesCount, settings->forceMaxVertexBoneCount, settings->maxNodePartBonesCount, polyBegin, polyCount);
                                 meshInfos.push_back(info);
                                 fbxMeshMap[mesh].push_back(info);
                                 if (info->bonesOverflow)
@@ -575,7 +577,7 @@ namespace readers {
                         if(hashes.size() > 0)
                         {
                             unsigned int polyCount = mesh->GetPolygonCount() - polyBegin;
-                            FbxMeshInfo * const info = new FbxMeshInfo(log, mesh, settings->packColors, settings->maxVertexBonesCount, settings->forceMaxVertexBoneCount, settings->maxNodePartBonesCount, polyBegin, polyCount);
+                            FbxMeshInfo * const info = new FbxMeshInfo(log, mesh, false, settings->maxVertexBonesCount, settings->forceMaxVertexBoneCount, settings->maxNodePartBonesCount, polyBegin, polyCount);
                             meshInfos.push_back(info);
                             fbxMeshMap[mesh].push_back(info);
                             if (info->bonesOverflow)
@@ -583,7 +585,7 @@ namespace readers {
                         }
                     }
                     else{
-                        FbxMeshInfo * const info = new FbxMeshInfo(log, mesh, settings->packColors, settings->maxVertexBonesCount, settings->forceMaxVertexBoneCount, settings->maxNodePartBonesCount, 0, mesh->GetPolygonCount());
+                        FbxMeshInfo * const info = new FbxMeshInfo(log, mesh, false, settings->maxVertexBonesCount, settings->forceMaxVertexBoneCount, settings->maxNodePartBonesCount, 0, mesh->GetPolygonCount());
                         meshInfos.push_back(info);
                         fbxMeshMap[mesh].push_back(info);
                         if (info->bonesOverflow)
@@ -865,7 +867,7 @@ namespace readers {
 				FbxTime fbxTime;
 				// Calculate all keyframes upfront
                 
-                if(settings->compressLevel == COMPRESS_LEVEL_1){
+                if(settings->compressLevel >= COMPRESS_LEVEL_1){
                     std::list<float> keytimeList = keyframesTimeMap[(*itr).first];
                     for (const auto& val : keytimeList) {
                         float time = val;
@@ -1015,6 +1017,7 @@ namespace readers {
         void addKeyframes(NodeAnimation *const &anim, std::vector<Keyframe *> &keyframes, float timeLength)
         {
             if (!keyframes.empty()) {
+				// log->debug("bone: %s", anim->node->id.c_str());
                 keyframes[0]->hasTranslation = true;
                 keyframes[0]->hasRotation = true;
                 keyframes[0]->hasScale = true;
@@ -1025,11 +1028,12 @@ namespace readers {
 				const int last = (int)keyframes.size()-1;
                 //float max = keyframes[last]->time;
 				Keyframe *k1 = keyframes[0], *k2, *k3;
+				float transEpsilon = (settings->compressLevel >= COMPRESS_LEVEL_2) ? 0.01f : 0.001f;
 				for (int i = 1; i < last; i++) {
 					k2 = keyframes[i];
 					k3 = keyframes[i+1];
 					// Check if the middle keyframe can be calculated by information, if so dont add it
-					if (!isLerp(k1->translation, k1->time, k2->translation, k2->time, k3->translation, k3->time, 3)) {
+					if (!isLerp(k1->translation, k1->time, k2->translation, k2->time, k3->translation, k3->time, 3, transEpsilon)) {
                         k2->hasTranslation = true;
                         k1 = k2;
 					}
@@ -1039,14 +1043,18 @@ namespace readers {
 				}
                 
                 std::vector<Keyframe *> keyframesTemp;
+				float rotationEpsilon = (settings->compressLevel >= COMPRESS_LEVEL_2) ? 0.002f : 0.001f;
                 // rotation frame
 				k1 = keyframes[0];
+				float lastAngle = qAngle(k1->rotation, keyframes[1]->rotation);
 				for (int i = 1; i < last; i++) {
 					k2 = keyframes[i];
 					k3 = keyframes[i+1];
 					// Check if the middle keyframe can be calculated by information, if so dont add it
-					//if (!isLerp(k1->rotation, k1->time, k2->rotation, k2->time, k3->rotation, k3->time, 3))// FIXME use slerp for quaternions
-                    if (!isSlerp(k1->rotation, k1->time, k2->rotation, k2->time, k3->rotation, k3->time, 4))
+					//if (!isLerp(k1->rotation, k1->time, k2->rotation, k2->time, k3->rotation, k3->time, 3))// FIXME use slerp for 
+					const float angle = qAngle(k1->rotation, k2->rotation);
+					// log->debug("angle: %f, lastAngle: %f", angle, lastAngle);
+                    if (angle < lastAngle || !isSlerp(k1->rotation, k1->time, k2->rotation, k2->time, k3->rotation, k3->time, 4, rotationEpsilon))
                     {
                         k2->hasRotation = true;
                         k1 = k2;
@@ -1055,15 +1063,17 @@ namespace readers {
                     else{
                         k2->hasRotation = false;
                     }
+					lastAngle = angle;
 				}
                 
                 // scale frame
 				k1 = keyframes[0];
+				float scaleEpsilon = (settings->compressLevel >= COMPRESS_LEVEL_2) ? 0.01f : 0.001f;
 				for (int i = 1; i < last; i++) {
 					k2 = keyframes[i];
 					k3 = keyframes[i+1];
 					// Check if the middle keyframe can be calculated by information, if so dont add it
-					if (!isLerp(k1->scale, k1->time, k2->scale, k2->time, k3->scale, k3->time, 3)) {
+					if (!isLerp(k1->scale, k1->time, k2->scale, k2->time, k3->scale, k3->time, 3, scaleEpsilon)) {
                         k2->hasScale = true;
                         k1 = k2;
 					} else{
@@ -1094,38 +1104,49 @@ namespace readers {
 			}
         }
 
-		inline bool cmp(const float &v1, const float &v2, const float &epsilon = 0.000001) {
+		inline bool cmp(const float &v1, const float &v2, const float &epsilon) {
 			const double d = v1 - v2;
 			return ((d < 0.f) ? -d : d) < epsilon;
 		}
 
-		inline bool cmp(const float *v1, const float *v2, const unsigned int &count) {
+		inline bool cmp(const float *v1, const float *v2, const unsigned int &count, const float &epsilon) {
 			for (unsigned int i = 0; i < count; i++)
-				if (!cmp(v1[i],v2[i]))
+				if (!cmp(v1[i],v2[i], epsilon))
 					return false;
 			return true;
 		}
 
-		inline bool isLerp(const float *v1, const float &t1, const float *v2, const float &t2, const float *v3, const float &t3, const int size) {
+		inline bool isLerp(const float *v1, const float &t1, const float *v2, const float &t2, const float *v3, const float &t3, const int size, const float epsilon) {
 			const double d = (t2 - t1) / (t3 - t1);
 			for (int i = 0; i < size; i++)
-				if (!cmp(v2[i], v1[i] + d * (v3[i] - v1[i])))
+				if (!cmp(v2[i], v1[i] + d * (v3[i] - v1[i]), epsilon))
 					return false;
 			return true;
 		}
         
-        inline bool isSlerp(const float *v1, const float &t1, const float *v2, const float &t2, const float *v3, const float &t3, const int size)
+        inline bool isSlerp(const float *v1, const float &t1, const float *v2, const float &t2, const float *v3, const float &t3, const int size, const float epsilon)
         {
             assert(size==4);
             const double d = (t2 - t1) / (t3 - t1);
             float q[4] = {0};
             slerp(v1[0], v1[1], v1[2], v1[3], v3[0], v3[1], v3[2], v3[3], d, &q[0], &q[1], &q[2], &q[3]);
             
-            if (!cmp(q, v2, size))
+            if (!cmp(q, v2, size, epsilon))
                 return false;
             return true;
         }
         
+		float qAngle(const float *q1, const  float* q2)
+		{
+			return qAngle(q1[0], q1[1], q1[2], q1[3], q2[0], q2[1], q2[2], q2[3]);
+		}
+
+		float qAngle(float q1x, float q1y, float q1z, float q1w, float q2x, float q2y, float q2z, float q2w)
+		{
+			float dot = q1x * q2x + q1y * q2y + q1z * q2z + q1w * q2w;
+			return std::acos(std::min(std::abs(dot), 1.0f)) * 2.0f * 57.29578f;
+		}
+
         void slerp(float q1x, float q1y, float q1z, float q1w, float q2x, float q2y, float q2z, float q2w, float t, float* dstx, float* dsty, float* dstz, float* dstw)
         {
             assert(dstx && dsty && dstz && dstw);

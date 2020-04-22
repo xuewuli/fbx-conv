@@ -37,7 +37,7 @@ struct FbxConvCommand {
 		help = (argc <= 1);
 
 		settings->flipV = false;
-		settings->packColors = false;
+		settings->packVertex = false;
 		settings->verbose = false;
 		settings->maxNodePartBonesCount = 40;
 		settings->maxVertexBonesCount = 4;
@@ -50,7 +50,7 @@ struct FbxConvCommand {
         settings->normalizeVertexNormal = false;
         settings->exportPart = EXPORT_PART_ALL;
         settings->normalMap = false;
-        settings->compressLevel = COMPRESS_LEVEL_DEFAULT;
+        settings->compressLevel = COMPRESS_LEVEL_2;
             
 		for (int i = 1; i < argc; i++) {
 			const char *arg = argv[i];
@@ -62,8 +62,9 @@ struct FbxConvCommand {
 					settings->flipV = true;
 				else if (arg[1] == 'v')
 					settings->verbose = true;
-				//else if (arg[1] == 'p')
-				//	settings->packColors = true;
+				else if (arg[1] == 'x') {
+					settings->packVertex = true;
+				}
 				else if (arg[1] == 'g')
 					settings->needReusableMesh = false;
                 else if (arg[1] == 'r')
@@ -127,6 +128,7 @@ struct FbxConvCommand {
 //      printf("-i <type>: Set the type of the input file to <type>\n");
 //#endif
         //printf("-o <type>: Set the type of the output file to <type>\n");
+        printf("-x       : pack Vertex.\n");
         printf("-f       : Flip the V texture coordinates.\n");
         printf("-p       : Export tagent binormal data.\n");
         printf("-m <size>: The maximum amount of vertices or indices a mesh may contain (default: 32k)\n");
@@ -137,7 +139,7 @@ struct FbxConvCommand {
         printf("-a       : Export c3b(binary) and c3t(text)\n");
         printf("-b       : Export c3b(binary)\n");
         printf("-t       : Export c3t(text)\n");
-        printf("-c <size>: The compression level: 0 , 1 (default: 0)\n");
+        printf("-c <size>: The animation compression level: 0 = disable, 1 = 0.001, 2 = 0.5 (default: 2, assume 1unit=1cm)\n");
         printf("-l       : Export model data only.\n");
         printf("-j       : Export animation data only.\n");
         printf("\n");

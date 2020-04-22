@@ -15,7 +15,7 @@ namespace fbxconv{
 
 	}
 
-	bool C3BFile::saveBinary(const std::string& filepath)
+	bool C3BFile::saveBinary(const std::string& filepath, const Settings* settings)
 	{
 		_file = fopen(filepath.c_str(), "w+b");
 
@@ -31,7 +31,7 @@ namespace fbxconv{
 
 		if(_models)
 		{
-			_models->writeBinary(_file);
+			_models->writeBinary(_file, settings);
 		}
 		
 		_refTable.updateOffset(_file);

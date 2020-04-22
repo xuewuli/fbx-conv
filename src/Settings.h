@@ -37,6 +37,7 @@ namespace fbxconv {
 enum COMPRESS_LEVEL{
     COMPRESS_LEVEL_DEFAULT,
     COMPRESS_LEVEL_1,
+    COMPRESS_LEVEL_2,
     COMPRESS_LEVEL_NUM
 };
     
@@ -53,8 +54,8 @@ struct Settings {
 	int outType;
 	/** Whether to flip the y-component of textures coordinates. */
 	bool flipV;
-	/** Whether to pack colors into one float. */
-	bool packColors;
+	/** Whether to pack Vertex into one bye. */
+	bool packVertex;
 	bool verbose;
 	/** The maximum allowed amount of bones in one nodepart, if a meshpart exceeds this amount it will be split up in parts. */
 	int maxNodePartBonesCount;

@@ -24,6 +24,7 @@ void write(unsigned int value, FILE* file);
 void write(unsigned short value, FILE* file);
 void write(bool value, FILE* file);
 void write(float value, FILE* file);
+void write(const char* values, int length, FILE* file);
 void write(const float* values, int length, FILE* file);
 
 /**

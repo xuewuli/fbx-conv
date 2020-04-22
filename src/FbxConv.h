@@ -168,7 +168,7 @@ class FbxConv {
 				out = out.substr(0, o+1) + "c3b";
 				C3BFile file;
 				file.AddModel(model);
-				file.saveBinary(out);
+				file.saveBinary(out, settings);
 				log->status(log::sExportToG3DB, out.c_str());
 			}
 
